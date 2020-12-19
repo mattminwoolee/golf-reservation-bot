@@ -2,6 +2,9 @@
 import os
 import random
 import time
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #selenium libraries
 from selenium import webdriver
@@ -23,8 +26,9 @@ import requests
 import urllib
 import pydub
 
-email = 'mattminwoolee@gmail.com'
-pw = 'Losverdesthensleep22'
+email = os.getenv('email')
+print('email: ' + email)
+pw = os.getenv('pw')
 
 def delay ():
     time.sleep(random.randint(2,3))
