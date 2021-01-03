@@ -1,7 +1,9 @@
+# chmod +x golf.py
 #system libraries
 import os
 import random
 import time
+import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,14 +30,29 @@ import pydub
 
 email = os.getenv('email')
 pw = os.getenv('pw')
-reservation_date = '12-28-2020'
-reservation_times = ['1:00pm', '10:30am', '11:00am', '11:20am', '11:15am']
+reservation_date = '1-10-2021'
+reservation_times = ['8:00am', '8:10am', '8:20am', '8:30am', '8:40am', '8:50am', 
+					 '9:00am', '9:10am', '9:20am', '9:30am', '9:40am', '9:50am', 
+					 '1:00pm', '1:10pm', '1:20pm', '1:30pm', '1:40pm', '1:50pm', 
+					 '10:00am', '10:10am', '10:20am', '10:30am', '10:40am','10:50am', 
+					 '11:00am', '11:10am', '11:20am', '11:30am', '11:40am', '11:50am',
+					 '3:20pm', '3:30pm', '3:40pm', '3:50pm',
+					 '4:00pm', '4:10pm', '4:20pm']
 # num_guests = 2
 
-def delay ():
-    time.sleep(random.randint(2,3))
+def timestamp_with_message (msg):
+	now = datetime.datetime.now()
+	current_time = now.strftime("%H:%M:%S")
+	print('[DEBUG] ' + msg + ' --- ' + current_time)
+
+def delay (seconds = None):
+	if seconds:
+		time.sleep(seconds)
+	else:
+		time.sleep(random.randint(2,3))
 
 def solve_audio_challenge (driver):
+	delay()
 	# click on the play button
 	driver.find_element_by_xpath("/html/body/div/div/div[3]/div/button").click()
 
@@ -44,10 +61,10 @@ def solve_audio_challenge (driver):
 	print("[INFO] Audio src: %s"%src)
 
 	#download the mp3 audio file from the source
-	urllib.request.urlretrieve(src, os.getcwd()+"\\sample.mp3")
-	sound = pydub.AudioSegment.from_mp3(os.getcwd()+"\\sample.mp3")
-	sound.export(os.getcwd()+"\\sample.wav", format="wav")
-	sample_audio = sr.AudioFile(os.getcwd()+"\\sample.wav")
+	urllib.request.urlretrieve(src, os.getcwd()+"/sample.mp3")
+	sound = pydub.AudioSegment.from_mp3(os.getcwd()+"/sample.mp3")
+	sound.export(os.getcwd()+"/sample.wav", format="wav")
+	sample_audio = sr.AudioFile(os.getcwd()+"/sample.wav")
 	r = sr.Recognizer()
 
 	with sample_audio as source:
@@ -77,7 +94,6 @@ def solve_captcha (driver):
 				break
 
 	driver.switch_to.frame(frames[0])
-	delay()
 
 	# click on audio challenge
 	WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button#recaptcha-audio-button"))).click()
@@ -89,74 +105,88 @@ def solve_captcha (driver):
 	driver.switch_to.frame(frames[-1])
 	delay()
 
+	attempt = 1
+	print('attempt number: ' + str(attempt))
 	solve_audio_challenge(driver)
 	delay()
 	# Check if multiple attempts required
 	# repeat_verify_message = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Multiple correct solutions required')]")))
 	repeat_verification_required = len(driver.find_elements_by_xpath("//*[contains(text(), 'Multiple correct solutions required')]")) > 0
-	attempt = 1
 	while (repeat_verification_required):
-		print('attempt number: ' + str(attempt))
 		attempt += 1
+		print('attempt number: ' + str(attempt))
 		solve_audio_challenge(driver)
-		delay()
-		repeat_verification_required = len(driver.find_elements_by_xpath("//*[contains(text(), 'Multiple correct solutions required')]")) > 0
-		print('repeat_verification_required: ' + str(repeat_verification_required))
-
+		delay(5)
+		driver.switch_to.default_content()
+		repeat_verification_required = len(driver.find_elements_by_xpath("//button[contains(text(), 'Continue')]")) < 1
+		driver.switch_to.frame(frames[-1])
+		print('[DEBUG] repeat_verification_required: ' + str(repeat_verification_required))
 
 	driver.switch_to.default_content()
 	delay()
-	# driver.find_element_by_id("recaptcha-demo-submit").click()
-	# delay()
 
 
 def make_reservation ():
+	now = datetime.datetime.now()
+	current_time = now.strftime("%H:%M:%S")
+	timestamp_with_message("make_reservation start")
 	# Initiate the browser
-	browser = webdriver.Chrome(ChromeDriverManager().install())
+	# browser = webdriver.Chrome(ChromeDriverManager().install())
+	browser = webdriver.Chrome(executable_path='/Users/mlee/Desktop/Personal/golf-reservation-bot/chromedriver')
 
-	delay()
 	# Open the website
 	browser.get('https://foreupsoftware.com/index.php/booking/20330/4502#/teetimes')
+	delay(5)
 
 	# Login to the site
 	browser.find_element_by_class_name('login').click()
+	delay(10)
 	browser.find_element_by_name('email').send_keys(email)
+	delay(10)
 	browser.find_element_by_name('password').send_keys(pw)
+	delay(10)
 	browser.find_element_by_xpath('//*[@id="login"]/div/div[3]/div[1]/button[1]').click();
+	delay(10)
 
 	reserve_button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Reserve a time now.')]")))
 	reserve_button.click()
-	# delay()
+
+	delay(10)
+	timestamp_with_message('Time should start on the dot')
 
 	# Reserve appointment
 	WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div/div[2]/div/div/button"))).click()
-	# browser.find_element_by_xpath("/html/body/div[1]/div/div[2]/div/div/button").click()
 	date_field = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.NAME, "date")))
 	for x in '12-16-2020':
 	    date_field.send_keys(Keys.BACK_SPACE);
 	date_field.send_keys(reservation_date)
 	date_field.send_keys(Keys.ENTER)
+	delay(2)
 
 	# Pick time slot
 	for reservation_time in reservation_times:
-		print('reservation_time: ' + reservation_time)
 		time_slots = browser.find_elements_by_xpath("//*[contains(text(), '" + reservation_time + "')]")
 		if len(time_slots) > 0:
 			time_slots[0].click()
 			break
 
+	timestamp_with_message('BOOKED!')
 	book_time = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Book Time')]")))
 	book_time.click()
 
-	# Solve CAPTCHA
-	solve_captcha(browser)
-	print('hello')
+	# Check for Captcha
+	continue_button_exists = len(browser.find_elements_by_xpath("//button[contains(text(), 'Continue')]")) > 0
+	if not continue_button_exists:
+		# Solve CAPTCHA
+		solve_captcha(browser)
 
 	# Add guests
 	# guest_buttons = driver.find_elements_by_xpath("//button[contains(text(), 'Guest')]")
 	# print('guest buttons length: ' + len(guest_buttons))
 	# for i in num_guests:
 	# 	guest_buttons[i].click()
+
+	# raise Exception("STOP HERE")
 
 	# Click Continue
 	continue_button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Continue')]")))
@@ -171,3 +201,6 @@ reservation = make_reservation()
 
 # https://medium.com/analytics-vidhya/how-to-easily-bypass-recaptchav2-with-selenium-7f7a9a44fa9e
 # https://ohyicong.medium.com/how-to-bypass-recaptcha-with-python-1d77a87a00d7
+
+# AUTOMATION SCHEDULER:
+# https://medium.com/analytics-vidhya/effortlessly-automate-your-python-scripts-cd295697dff6

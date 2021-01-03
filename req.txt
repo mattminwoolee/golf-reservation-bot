@@ -3,12 +3,15 @@ chardet==4.0.0
 colorama==0.4.4
 configparser==5.0.1
 crayons==0.4.0
+DateTime==4.3
 ffmpy==0.2.3
 idna==2.10
 pydub==0.24.1
 python-dotenv==0.15.0
+pytz==2020.4
 requests==2.25.1
 selenium==3.141.0
 SpeechRecognition==3.8.1
 urllib3==1.26.2
 webdriver-manager==3.2.2
+zope.interface==5.2.0
