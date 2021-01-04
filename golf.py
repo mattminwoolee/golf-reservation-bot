@@ -161,14 +161,17 @@ def make_reservation ():
 	    date_field.send_keys(Keys.BACK_SPACE);
 	date_field.send_keys(reservation_date)
 	date_field.send_keys(Keys.ENTER)
-	delay(2)
+	delay(1)
 
 	# Pick time slot
 	for reservation_time in reservation_times:
 		time_slots = browser.find_elements_by_xpath("//*[contains(text(), '" + reservation_time + "')]")
 		if len(time_slots) > 0:
 			time_slots[0].click()
-			break
+			delay(1)
+			book_time_button_present = len(browser.find_elements_by_xpath("//button[contains(text(), 'Book Time')]")) > 0
+			if book_time_button_present:
+				break
 
 	timestamp_with_message('BOOKED!')
 	book_time = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Book Time')]")))
