@@ -3,7 +3,10 @@
 import os
 import random
 import time
-import datetime
+import threading
+
+from datetime import datetime, timedelta, date
+from threading import Timer
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,7 +33,11 @@ import pydub
 
 email = os.getenv('email')
 pw = os.getenv('pw')
-reservation_date = '1-10-2021'
+
+next_week = date.today() + timedelta(days=7)
+reservation_date = next_week.strftime("%m-%d-20%y")
+# reservation_date = '1-12-2021'
+
 reservation_times = ['8:00am', '8:10am', '8:20am', '8:30am', '8:40am', '8:50am', 
 					 '9:00am', '9:10am', '9:20am', '9:30am', '9:40am', '9:50am', 
 					 '1:00pm', '1:10pm', '1:20pm', '1:30pm', '1:40pm', '1:50pm', 
@@ -41,7 +48,7 @@ reservation_times = ['8:00am', '8:10am', '8:20am', '8:30am', '8:40am', '8:50am',
 # num_guests = 2
 
 def timestamp_with_message (msg):
-	now = datetime.datetime.now()
+	now = datetime.now()
 	current_time = now.strftime("%H:%M:%S")
 	print('[DEBUG] ' + msg + ' --- ' + current_time)
 
@@ -125,44 +132,10 @@ def solve_captcha (driver):
 	driver.switch_to.default_content()
 	delay()
 
-
-def make_reservation ():
-	now = datetime.datetime.now()
-	current_time = now.strftime("%H:%M:%S")
-	timestamp_with_message("make_reservation start")
-	# Initiate the browser
-	# browser = webdriver.Chrome(ChromeDriverManager().install())
-	browser = webdriver.Chrome(executable_path='/Users/mlee/Desktop/Personal/golf-reservation-bot/chromedriver')
-
-	# Open the website
-	browser.get('https://foreupsoftware.com/index.php/booking/20330/4502#/teetimes')
-	delay(5)
-
-	# Login to the site
-	browser.find_element_by_class_name('login').click()
-	delay(10)
-	browser.find_element_by_name('email').send_keys(email)
-	delay(10)
-	browser.find_element_by_name('password').send_keys(pw)
-	delay(10)
-	browser.find_element_by_xpath('//*[@id="login"]/div/div[3]/div[1]/button[1]').click();
-	delay(10)
-
-	reserve_button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Reserve a time now.')]")))
-	reserve_button.click()
-
-	delay(10)
-	timestamp_with_message('Time should start on the dot')
-
-	# Reserve appointment
-	WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div/div[2]/div/div/button"))).click()
-	date_field = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.NAME, "date")))
-	for x in '12-16-2020':
-	    date_field.send_keys(Keys.BACK_SPACE);
-	date_field.send_keys(reservation_date)
+def book_time_slot(browser, date_field):
+	timestamp_with_message('BOOKING STARTED!')
 	date_field.send_keys(Keys.ENTER)
 	delay(1)
-
 	# Pick time slot
 	for reservation_time in reservation_times:
 		time_slots = browser.find_elements_by_xpath("//*[contains(text(), '" + reservation_time + "')]")
@@ -172,8 +145,9 @@ def make_reservation ():
 			book_time_button_present = len(browser.find_elements_by_xpath("//button[contains(text(), 'Book Time')]")) > 0
 			if book_time_button_present:
 				break
-
-	timestamp_with_message('BOOKED!')
+	
+	timestamp_with_message('BOOKING FINISHED!')
+	raise Exception("STOP HERE")
 	book_time = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Book Time')]")))
 	book_time.click()
 
@@ -182,14 +156,6 @@ def make_reservation ():
 	if not continue_button_exists:
 		# Solve CAPTCHA
 		solve_captcha(browser)
-
-	# Add guests
-	# guest_buttons = driver.find_elements_by_xpath("//button[contains(text(), 'Guest')]")
-	# print('guest buttons length: ' + len(guest_buttons))
-	# for i in num_guests:
-	# 	guest_buttons[i].click()
-
-	# raise Exception("STOP HERE")
 
 	# Click Continue
 	continue_button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Continue')]")))
@@ -200,7 +166,47 @@ def make_reservation ():
 	book_time.click()
 
 
-reservation = make_reservation()
+def begin_reservation ():
+	now = datetime.now()
+	current_time = now.strftime("%H:%M:%S")
+	timestamp_with_message("begin_reservation start")
+	# Initiate the browser
+	# browser = webdriver.Chrome(ChromeDriverManager().install())
+	browser = webdriver.Chrome(executable_path='/Users/mlee/Desktop/Personal/golf-reservation-bot/chromedriver')
+
+	# Open the website
+	browser.get('https://foreupsoftware.com/index.php/booking/20330/4502#/teetimes')
+	delay(5)
+
+	# Login to the site
+	browser.find_element_by_class_name('login').click()
+	browser.find_element_by_name('email').send_keys(email)
+	browser.find_element_by_name('password').send_keys(pw)
+	browser.find_element_by_xpath('//*[@id="login"]/div/div[3]/div[1]/button[1]').click();
+	delay(5)
+
+	reserve_button = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Reserve a time now.')]")))
+	reserve_button.click()
+
+	delay(2)
+
+	# Reserve appointment
+	WebDriverWait(browser, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div/div[2]/div/div/button"))).click()
+	date_field = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.NAME, "date")))
+	for x in '12-16-2020':
+	    date_field.send_keys(Keys.BACK_SPACE);
+	date_field.send_keys(reservation_date)
+
+	# Set Timer to Begin book at 6:00 AM ON THE DOT!	
+	today = datetime.today()
+	run_at = today.replace(day=today.day, hour=6, minute=0, second=0, microsecond=0)
+	delay_seconds = ( run_at - datetime.now() ).total_seconds()
+	threading.Timer(delay_seconds, book_time_slot,[browser, date_field]).start()
+
+
+reservation = begin_reservation()
+
+'https://foreupsoftware.com/index.php/api/booking/times?time=all&date=01-06-2021&holes=18&players=2&booking_class=3979&schedule_id=4502&schedule_ids%5B%5D=0&schedule_ids%5B%5D=4502&specials_only=0&api_key=no_limits'
 
 # https://medium.com/analytics-vidhya/how-to-easily-bypass-recaptchav2-with-selenium-7f7a9a44fa9e
 # https://ohyicong.medium.com/how-to-bypass-recaptcha-with-python-1d77a87a00d7
